@@ -79,12 +79,18 @@ def on_message(client, userdata, msg):
             client.publish("ack-put", str(nodeID))
             print("Node %s: Valor %s armazenado com sucesso na chave %s." % (name, value, str(key)))
 
-    else:  # get
+    elif topic == "get":
         if check_interval(m):  # Recebe uma chave
             key = int(m)
             value = hashTable[key]
             client.publish("res-get", value)
             print("Node %s: Valor %s retornado da chave %s." % (name, value, str(key)))
+
+    elif topic == "leave":
+        print("")
+
+    elif topic == "ack-leave":
+        print("")
 
 
 rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
@@ -142,6 +148,9 @@ client.subscribe("get")
 
 ################ Saída da DHT ####################
 #   Como vai sair? Tratar sinal de ctrl-c?
+
+client.subscribe("leave")
+client.subscribe("ack-leave")
 
 while True:
     continue
