@@ -1,4 +1,5 @@
 import sys
+import signal
 from random import randrange
 from time import sleep
 
@@ -6,12 +7,15 @@ import paho.mqtt.client as mqtt
 
 antecessor = None
 sucessor = None
+disconnected = False
+sucessor_ready = False
+antecessor_ready = False
 
 
 def check_interval(k):  # Checa se a chave está dentro do intervalo de responsabilidade
     k = int(k)
     if antecessor is None:  # Se é o único nó na rede,
-        return True         # todas as chaves ficam sob sua responsabilidade
+        return True  # todas as chaves ficam sob sua responsabilidade
     elif antecessor > nodeID:
         return (antecessor < k <= rangeAddr) or (0 <= k <= nodeID)
 
@@ -40,9 +44,16 @@ def checkIfSuc(newNodeID):  # Checa se o novo nó é um sucessor
     return suc
 
 
+def print_intervalo(nome, esq, dir):
+    print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
+          % (nome, f"{int(esq):,}".replace(",", "\'"), f"{int(dir):,}".replace(",", "\'")))
+
+
 def on_message(client, userdata, msg):
     topic = msg.topic
     m = msg.payload.decode("utf-8")
+    global antecessor
+    global sucessor
 
     # Novo nó entrando na DHT
     if topic == "join":
@@ -60,16 +71,13 @@ def on_message(client, userdata, msg):
     elif topic == "ack-join":
         source, dest, tipo = m.split("/")
         source = int(source)
-        global antecessor
-        global sucessor
 
         if int(dest) == nodeID:  # Deve alterar seu intervalo de responsabilidade se necessário
             if tipo == "sucessor":
                 sucessor = source
             else:
                 antecessor = source
-                print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
-                      % (name, f"{antecessor:,}".replace(",", "\'"), f"{nodeID:,}".replace(",", "\'")))
+                print_intervalo(name, antecessor, nodeID)
 
     elif topic == "put":
         key, value = m.split(" ", 1)  # m é uma mensagem no formato "chave string"
@@ -87,10 +95,65 @@ def on_message(client, userdata, msg):
             print("Node %s: Valor %s retornado da chave %s." % (name, value, str(key)))
 
     elif topic == "leave":
-        print("")
+        leave_node, leave_sucessor, leave_antecessor = m.split("/")
+        leave_node = int(leave_node)
+        leave_sucessor = int(leave_sucessor)
+        leave_antecessor = int(leave_antecessor)
+
+        # Node não deve tratar a própria msg de leave
+        if leave_node != nodeID:
+
+            # No caso de uma DHT com apenas dois nodes e um deles sai,
+            # antecessor e sucessor no node restante devem ser None
+            if leave_sucessor == leave_antecessor:
+                antecessor = None
+                sucessor = None
+                # Mensagem de reconhecimento no formato: {ID do nó saindo} / {ID do nó que reconhece a saída}
+                client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
+                print_intervalo(name, 0, nodeID)
+
+            else:
+                # Se o node saindo é antecessor deste node, devemos atualizar o antecessor deste node
+                # para apontar para o antecessor do node que está saindo
+                if leave_node == antecessor:
+                    antecessor = leave_antecessor
+                    client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
+                    print_intervalo(name, antecessor, nodeID)
+
+                # Se o node saindo é sucessor deste node, devemos atualizar o sucessor deste node
+                # para apontar para o sucessor do node que está saindo
+                if leave_node == sucessor:
+                    sucessor = leave_sucessor
+                    client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
+                    print_intervalo(name, antecessor, nodeID)
 
     elif topic == "ack-leave":
-        print("")
+        global disconnected
+        global sucessor_ready
+        global antecessor_ready
+        leave_node, ack_node = m.split("/")
+        leave_node = int(leave_node)
+        ack_node = int(ack_node)
+
+        # Node não deve tratar a própria msg de ack-leave
+        if leave_node == nodeID:
+            # Caso o reconhecimento seja de seu nó sucessor
+            if ack_node == sucessor:
+                sucessor_ready = True
+            # Caso o reconhecimento seja de seu nó antecessor (que pode ser também seu nó sucessor)
+            if ack_node == antecessor:
+                antecessor_ready = True
+            if sucessor_ready and antecessor_ready:
+                disconnected = True  # Permite quebra do loop no signal_handler
+
+
+def signal_handler(sig, frame):
+    # Formato da mensagem de saída: {ID do nó que deseja sair} / {ID de seu sucessor} / {ID de ser antecessor}
+    client.publish("leave", "%s/%s/%s" % (str(nodeID), sucessor, antecessor))
+    while disconnected is False:
+        sleep(0.5)
+    client.disconnect()
+    exit(0)
 
 
 rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
@@ -109,7 +172,7 @@ else:
 client = mqtt.Client("Node_%s" % name)  # Passar como parâmetro o nome/número do nó
 while client.connect(mqttBroker) != 0:
     sleep(0.1)
-print("Node_%s: conectado ao broker." % name, "ID: " + str(nodeID))
+print("Node %s: Conectado ao broker." % name, "ID: " + str(nodeID))
 
 ################ Entrada na DHT ####################
 
@@ -119,14 +182,14 @@ client.on_message = on_message
 client.loop_start()
 
 # --------> E SE ELE FOR O PRIMEIRO? Espera um tempo e então começa a DHT sozinho
-max_times = 100
+max_times = 10
 
 count = 0
 # Manda seu nodeId para entrar e espera receber nodeId do seu antecessor e sucessor
 
 while (antecessor is None or sucessor is None) and count < max_times:
     client.publish("join", nodeID)  # Para garantir que os nós receberão seu nodeId
-    sleep(0.1)
+    sleep(0.5)
     count += 1
 
 # Manda mensagem para seu sucessor e antecessor no tópico ack-join
@@ -138,8 +201,8 @@ if antecessor is not None:  # se não for o único nó na DHT
     client.publish("ack-join", "%d/%d/sucessor" % (nodeID, antecessor))  # "nodeid/nodeIdAntecessor"
     # Aviso ao seu sucessor de que você é o antecessor dele e está pronto
     client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor))  # "nodeid/nodeIdSucessor"
-else:                                                        # Formatação temporária
-    print("Node %s: Intervalo de responsabilidade: (%s, %s]" % (name, 0, f"{rangeAddr:,}".replace(",", "\'")))
+else:
+    print_intervalo(name, 0, rangeAddr)
 
 # Se inscreve no tópico join, put e get
 client.subscribe("join")
@@ -147,10 +210,10 @@ client.subscribe("put")
 client.subscribe("get")
 
 ################ Saída da DHT ####################
-#   Como vai sair? Tratar sinal de ctrl-c?
 
 client.subscribe("leave")
 client.subscribe("ack-leave")
+signal.signal(signal.SIGINT, signal_handler)
 
 while True:
     continue

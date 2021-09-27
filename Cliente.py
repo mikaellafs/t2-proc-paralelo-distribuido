@@ -99,3 +99,4 @@ for i in range(1, keysQtde + 1, 1):
         print("Retrieved value " + values_received[idx] + " matches expected value " + values_sent[idx])
 
 client.loop_stop()
+client.disconnect()
