@@ -97,8 +97,9 @@ def on_message(client, userdata, msg):
     elif topic == "leave":
         leave_node, leave_sucessor, leave_antecessor = m.split("/")
         leave_node = int(leave_node)
-        leave_sucessor = int(leave_sucessor)
-        leave_antecessor = int(leave_antecessor)
+        if leave_sucessor != "None" and leave_antecessor != "None":
+            leave_sucessor = int(leave_sucessor)
+            leave_antecessor = int(leave_antecessor)
 
         # Node não deve tratar a própria msg de leave
         if leave_node != nodeID:
@@ -106,11 +107,12 @@ def on_message(client, userdata, msg):
             # No caso de uma DHT com apenas dois nodes e um deles sai,
             # antecessor e sucessor no node restante devem ser None
             if leave_sucessor == leave_antecessor:
+                global rangeAddr
                 antecessor = None
                 sucessor = None
                 # Mensagem de reconhecimento no formato: {ID do nó saindo} / {ID do nó que reconhece a saída}
                 client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
-                print_intervalo(name, 0, nodeID)
+                print_intervalo(name, 0, rangeAddr)
 
             else:
                 # Se o node saindo é antecessor deste node, devemos atualizar o antecessor deste node
@@ -126,6 +128,8 @@ def on_message(client, userdata, msg):
                     sucessor = leave_sucessor
                     client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
                     print_intervalo(name, antecessor, nodeID)
+        else:
+            client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
 
     elif topic == "ack-leave":
         global disconnected
@@ -135,21 +139,28 @@ def on_message(client, userdata, msg):
         leave_node = int(leave_node)
         ack_node = int(ack_node)
 
-        # Node não deve tratar a própria msg de ack-leave
+        # Node deve tratar apenas a própria msg de ack-leave
         if leave_node == nodeID:
+
             # Caso o reconhecimento seja de seu nó sucessor
-            if ack_node == sucessor:
+            if ack_node == sucessor or ack_node == nodeID:
+                client.unsubscribe("put")  # Nesse momento, o intervalo desse nó já está coberto por outro nó
                 sucessor_ready = True
+
             # Caso o reconhecimento seja de seu nó antecessor (que pode ser também seu nó sucessor)
-            if ack_node == antecessor:
+            if ack_node == antecessor or ack_node == nodeID:
                 antecessor_ready = True
+
             if sucessor_ready and antecessor_ready:
+                # Publica todos os elementos de sua hashTable de volta na DHT
+                for key in hashTable:
+                    client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
                 disconnected = True  # Permite quebra do loop no signal_handler
 
 
 def signal_handler(sig, frame):
     # Formato da mensagem de saída: {ID do nó que deseja sair} / {ID de seu sucessor} / {ID de ser antecessor}
-    client.publish("leave", "%s/%s/%s" % (str(nodeID), sucessor, antecessor))
+    client.publish("leave", "%s/%s/%s" % (str(nodeID), str(sucessor), str(antecessor)))
     while disconnected is False:
         sleep(0.5)
     client.disconnect()
