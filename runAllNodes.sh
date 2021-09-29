@@ -19,7 +19,8 @@ fi
 CONTADOR=0
 while [  $CONTADOR -lt ${totalNodes} ]; do
 	python3 -u Node.py >> log.txt &		
-	let CONTADOR=CONTADOR+1; 
+	let CONTADOR=CONTADOR+1;
+	sleep 0.5
 done
 
 echo "Nodes criados, aguarde até que todos fiquem prontos..."

@@ -1,0 +1,15 @@
+
+Node_715: conectado ao broker. ID: 715
+Node 715: Intervalo de responsabilidade: (0, 1'000]
+Node_584: conectado ao broker. ID: 584
+Node 584: Intervalo de responsabilidade: (715, 584]
+Node 715: Intervalo de responsabilidade: (584, 715]
+Node_26: conectado ao broker. ID: 26
+Node_549: conectado ao broker. ID: 549
+Node_387: conectado ao broker. ID: 387
+Node 26: Intervalo de responsabilidade: (715, 26]
+Node 549: Intervalo de responsabilidade: (715, 549]
+Node 387: Intervalo de responsabilidade: (715, 387]
+Node 584: Intervalo de responsabilidade: (26, 584]
+Node 584: Intervalo de responsabilidade: (549, 584]
+Node 584: Intervalo de responsabilidade: (387, 584]

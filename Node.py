@@ -66,7 +66,7 @@ def on_message(client, userdata, msg):
         if int(dest) == nodeID:  # Deve alterar seu intervalo de responsabilidade se necessário
             if tipo == "sucessor":
                 sucessor = source
-            else:
+            elif antecessor != source:
                 antecessor = source
                 print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
                       % (name, f"{antecessor:,}".replace(",", "\'"), f"{nodeID:,}".replace(",", "\'")))
@@ -86,8 +86,8 @@ def on_message(client, userdata, msg):
             client.publish("res-get", value)
             print("Node %s: Valor %s retornado da chave %s." % (name, value, str(key)))
 
-
-rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
+rangeAddr = 1000
+#rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
 hashTable = {}
 nodeID = randrange(0, rangeAddr)
 
@@ -113,14 +113,14 @@ client.on_message = on_message
 client.loop_start()
 
 # --------> E SE ELE FOR O PRIMEIRO? Espera um tempo e então começa a DHT sozinho
-max_times = 100
+max_times = 10
 
 count = 0
 # Manda seu nodeId para entrar e espera receber nodeId do seu antecessor e sucessor
 
 while (antecessor is None or sucessor is None) and count < max_times:
     client.publish("join", nodeID)  # Para garantir que os nós receberão seu nodeId
-    sleep(0.1)
+    sleep(0.01)
     count += 1
 
 # Manda mensagem para seu sucessor e antecessor no tópico ack-join
