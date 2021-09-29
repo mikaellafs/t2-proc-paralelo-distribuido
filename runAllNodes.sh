@@ -11,7 +11,7 @@ trap ctrlCHandler SIGINT;
 
 echo "" > log.txt #limpa arquivo de log
 
-totalNodes=8
+totalNodes=50
 if [ "$1" != "" ]; then 
 	totalNodes=$1
 fi

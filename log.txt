@@ -1,15 +1,20 @@
 
-Node_715: conectado ao broker. ID: 715
-Node 715: Intervalo de responsabilidade: (0, 1'000]
-Node_584: conectado ao broker. ID: 584
-Node 584: Intervalo de responsabilidade: (715, 584]
-Node 715: Intervalo de responsabilidade: (584, 715]
-Node_26: conectado ao broker. ID: 26
-Node_549: conectado ao broker. ID: 549
-Node_387: conectado ao broker. ID: 387
-Node 26: Intervalo de responsabilidade: (715, 26]
-Node 549: Intervalo de responsabilidade: (715, 549]
-Node 387: Intervalo de responsabilidade: (715, 387]
-Node 584: Intervalo de responsabilidade: (26, 584]
-Node 584: Intervalo de responsabilidade: (549, 584]
-Node 584: Intervalo de responsabilidade: (387, 584]
+Node_76: conectado ao broker. ID: 76
+Node 76: Intervalo de responsabilidade: (0, 1'000]
+Node_548: conectado ao broker. ID: 548
+Node 548: Intervalo de responsabilidade: (76, 548]
+Node 76: Intervalo de responsabilidade: (548, 76]
+Node_52: conectado ao broker. ID: 52
+Node 52: Intervalo de responsabilidade: (548, 52]
+Node_993: conectado ao broker. ID: 993
+Node 993: Intervalo de responsabilidade: (0, 1'000]
+Node 993: Intervalo de responsabilidade: (548, 993]
+Node_312: conectado ao broker. ID: 312
+Node 312: Intervalo de responsabilidade: (76, 312]
+Node 548: Intervalo de responsabilidade: (312, 548]
+Node_518: conectado ao broker. ID: 518
+Node 518: Intervalo de responsabilidade: (312, 518]
+Node 548: Intervalo de responsabilidade: (518, 548]
+Node_451: conectado ao broker. ID: 451
+Node 451: Intervalo de responsabilidade: (312, 451]
+Node 518: Intervalo de responsabilidade: (451, 518]

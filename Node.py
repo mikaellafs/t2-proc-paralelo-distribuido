@@ -70,6 +70,12 @@ def on_message(client, userdata, msg):
                 antecessor = source
                 print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
                       % (name, f"{antecessor:,}".replace(",", "\'"), f"{nodeID:,}".replace(",", "\'")))
+                
+                # Publica elementos da sua hashTable que não são mais de sua responsabilidade 
+                for key in hashTable:
+                    if not check_interval(key):
+                        client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
+                        hashTable.pop(key) # apaga a chave
 
     elif topic == "put":
         key, value = m.split(" ", 1)  # m é uma mensagem no formato "chave string"
