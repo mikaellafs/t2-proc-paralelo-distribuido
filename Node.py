@@ -1,4 +1,5 @@
 import sys
+import signal
 from random import randrange
 from time import sleep
 
@@ -6,12 +7,16 @@ import paho.mqtt.client as mqtt
 
 antecessor = None
 sucessor = None
+disconnected = False
+sucessor_ready = False
+antecessor_ready = False
+has_started = False
 
 
 def check_interval(k):  # Checa se a chave está dentro do intervalo de responsabilidade
     k = int(k)
     if antecessor is None:  # Se é o único nó na rede,
-        return True         # todas as chaves ficam sob sua responsabilidade
+        return True  # todas as chaves ficam sob sua responsabilidade
     elif antecessor > nodeID:
         return (antecessor < k <= rangeAddr) or (0 <= k <= nodeID)
 
@@ -30,7 +35,7 @@ def checkIfAnt(newNodeID):  # Checa se o novo nó é um antecessor
 
 
 def checkIfSuc(newNodeID):  # Checa se o novo nó é um sucessor
-    if antecessor is None:  # Se ele for o único nó na hash ...
+    if sucessor is None:  # Se ele for o único nó na hash ...
         suc = True
     elif sucessor < nodeID:
         suc = nodeID < newNodeID <= rangeAddr or 0 <= newNodeID < sucessor
@@ -40,36 +45,52 @@ def checkIfSuc(newNodeID):  # Checa se o novo nó é um sucessor
     return suc
 
 
+def print_intervalo(nome, esq, dir):
+    print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
+          % (nome, f"{int(esq):,}".replace(",", "\'"), f"{int(dir):,}".replace(",", "\'")))
+
+
 def on_message(client, userdata, msg):
     topic = msg.topic
     m = msg.payload.decode("utf-8")
 
     # Novo nó entrando na DHT
-    if topic == "join":
+    if topic == "has_started":
+        global has_started
+        has_started = True
+    elif topic == "join":
+        client.publish("has_started", "yes") # mesmo que nao seja ant/suc, avisa que a DHT já começou
         newNodeID = int(m)
 
         # Verifica se é um novo antecessor, logo avisa pro novo nó que você é sucessor dele
         if checkIfAnt(newNodeID):
+            global antecessor
+
             client.publish("ack-join", "%s/%s/sucessor" % (str(nodeID), str(newNodeID)))
-        # Verifica se é um novo sucessor, logo avisa pro novo nó que você é antecessor dele        
+
+            # Altera intervalo de responsabilidade
+            antecessor = newNodeID
+            print_intervalo(name, antecessor, nodeID)
+
+        # Verifica se é um novo sucessor, logo avisa pro novo nó que você é antecessor dele 
         if checkIfSuc(newNodeID):
+            global sucessor
+
             client.publish("ack-join", "%s/%s/antecessor" % (str(nodeID), str(newNodeID)))
+            sucessor = newNodeID
 
     # Confirmação da entrada na DHT:
     # Formato:  {Node remetente} / {Node destinatário} / {O que o remetente é para o destinatário}
     elif topic == "ack-join":
         source, dest, tipo = m.split("/")
         source = int(source)
-        global antecessor
-        global sucessor
 
-        if int(dest) == nodeID:  # Deve alterar seu intervalo de responsabilidade se necessário
+        if int(dest) == nodeID: # Define intervalo de responsabilidade
             if tipo == "sucessor":
                 sucessor = source
             elif antecessor != source:
                 antecessor = source
-                print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
-                      % (name, f"{antecessor:,}".replace(",", "\'"), f"{nodeID:,}".replace(",", "\'")))
+                print_intervalo(name, antecessor, nodeID)
                 
                 # Publica elementos da sua hashTable que não são mais de sua responsabilidade 
                 for key in hashTable:
@@ -85,12 +106,13 @@ def on_message(client, userdata, msg):
             client.publish("ack-put", str(nodeID))
             print("Node %s: Valor %s armazenado com sucesso na chave %s." % (name, value, str(key)))
 
-    else:  # get
+    elif topic == "get":
         if check_interval(m):  # Recebe uma chave
             key = int(m)
             value = hashTable[key]
             client.publish("res-get", value)
             print("Node %s: Valor %s retornado da chave %s." % (name, value, str(key)))
+
 
 rangeAddr = 1000
 #rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
@@ -109,7 +131,7 @@ else:
 client = mqtt.Client("Node_%s" % name)  # Passar como parâmetro o nome/número do nó
 while client.connect(mqttBroker) != 0:
     sleep(0.1)
-print("Node_%s: conectado ao broker." % name, "ID: " + str(nodeID))
+print("Node %s: Conectado ao broker." % name, "ID: " + str(nodeID))
 
 ################ Entrada na DHT ####################
 
@@ -118,36 +140,31 @@ client.subscribe("ack-join")
 client.on_message = on_message
 client.loop_start()
 
-# --------> E SE ELE FOR O PRIMEIRO? Espera um tempo e então começa a DHT sozinho
-max_times = 10
+# --------> E SE ELE FOR O PRIMEIRO? Verifica se a DHT já foi iniciada, espera um tempo 
+#                                   e inicia a DHT sozinho
+max_times = 100
 
 count = 0
+client.subscribe("has_started")
 # Manda seu nodeId para entrar e espera receber nodeId do seu antecessor e sucessor
-
-while (antecessor is None or sucessor is None) and count < max_times:
+while (antecessor is None or sucessor is None) and (count < max_times or has_started):
     client.publish("join", nodeID)  # Para garantir que os nós receberão seu nodeId
     sleep(0.01)
     count += 1
 
-# Manda mensagem para seu sucessor e antecessor no tópico ack-join
-# com seu nodeID confirmando que está pronto
-# já que são os únicos que precisam alterar a responsabilidade
-
-if antecessor is not None:  # se não for o único nó na DHT
-    # Aviso ao seu antecessor de que você é o sucessor dele e está pronto
-    client.publish("ack-join", "%d/%d/sucessor" % (nodeID, antecessor))  # "nodeid/nodeIdAntecessor"
-    # Aviso ao seu sucessor de que você é o antecessor dele e está pronto
-    client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor))  # "nodeid/nodeIdSucessor"
-else:                                                        # Formatação temporária
-    print("Node %s: Intervalo de responsabilidade: (%s, %s]" % (name, 0, f"{rangeAddr:,}".replace(",", "\'")))
+if antecessor is None:
+    print_intervalo(name, 0, rangeAddr)
 
 # Se inscreve no tópico join, put e get
 client.subscribe("join")
+client.subscribe("has_started")
 client.subscribe("put")
 client.subscribe("get")
+client.unsubscribe("has_started")
+client.unsubscribe("ack-join")
 
 ################ Saída da DHT ####################
-#   Como vai sair? Tratar sinal de ctrl-c?
+
 
 while True:
     continue
