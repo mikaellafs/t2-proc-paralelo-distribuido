@@ -15,9 +15,9 @@ def on_message(client, userdata, msg):
 
     # Resgata o conteúdo da mensagem
     m = msg.payload.decode("utf-8")
+    global ack_received
 
     if msg.topic == "ack-put":
-        global ack_received
         print("Successfully added value to nodeID " + m)
         ack_received = True
         return
@@ -99,3 +99,4 @@ for i in range(1, keysQtde + 1, 1):
         print("Retrieved value " + values_received[idx] + " matches expected value " + values_sent[idx])
 
 client.loop_stop()
+client.disconnect()
