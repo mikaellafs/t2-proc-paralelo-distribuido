@@ -101,18 +101,25 @@ def on_message(client, userdata, msg):
                         hashTable.pop(key) # apaga a chave
 
     elif topic == "put":
+        codCliente, m = m.split("/")
         key, value = m.split(" ", 1)  # m é uma mensagem no formato "chave string"
+
+        #print(codCliente, m, " ", key, value)
         if check_interval(key):
             key = int(key)
             hashTable[key] = value
-            client.publish("ack-put", str(nodeID))
+            msg = codCliente + "/" + str(nodeID)
+
+            client.publish("ack-put", msg)
             print("Node %s: Valor %s armazenado com sucesso na chave %s." % (name, value, str(key)))
 
     elif topic == "get":
         if check_interval(m):  # Recebe uma chave
             key = int(m)
             value = hashTable[key]
-            client.publish("res-get", value)
+            msg = str(key) + "/" + value
+
+            client.publish("res-get", msg)
             print("Node %s: Valor %s retornado da chave %s." % (name, value, str(key)))
 
     elif topic == "leave":
@@ -226,16 +233,7 @@ while (antecessor is None or sucessor is None) and (count < max_times or has_sta
     sleep(0.01)
     count += 1
 
-# Manda mensagem para seu sucessor e antecessor no tópico ack-join
-# com seu nodeID confirmando que está pronto
-# já que são os únicos que precisam alterar a responsabilidade
-
-if antecessor is not None:  # se não for o único nó na DHT
-    # Aviso ao seu antecessor de que você é o sucessor dele e está pronto
-    client.publish("ack-join", "%d/%d/sucessor" % (nodeID, antecessor))  # "nodeid/nodeIdAntecessor"
-    # Aviso ao seu sucessor de que você é o antecessor dele e está pronto
-    client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor))  # "nodeid/nodeIdSucessor"
-else:
+if antecessor is None:  # se for o único nó na DHT:    
     print_intervalo(name, 0, rangeAddr)
 
 # Se inscreve no tópico join, put e get

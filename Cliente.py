@@ -18,19 +18,30 @@ def on_message(client, userdata, msg):
     global ack_received
 
     if msg.topic == "ack-put":
-        print("Successfully added value to nodeID " + m)
+        codC, node = m.split("/")
+        if codC != codCliente: return
+
+        print(codCliente + ": " + "Successfully added value to nodeID " + node)
         ack_received = True
         return
 
     if msg.topic == "res-get":
         global values_received
+        key, m = m.split("/")
+        #print(key)
+        if key not in keys: return
+
         values_received = np.append(values_received, m)
-        print("Received value: " + m)
+        print(codCliente + ": " + "Received value: " + m)
         ack_received = True
         return
 
 
-rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
+from django.utils.crypto import get_random_string
+codCliente = get_random_string(10) # Identificador do cliente
+
+rangeAddr = 1000
+#rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
 mqttBroker = "127.0.0.1"  # Broker tem IP local e porta padrão
 
 client = mqtt.Client("Cliente")
@@ -41,7 +52,8 @@ client.subscribe("res-get")  # response-get()
 
 client.on_message = on_message
 
-keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
+keysQtde = 10
+#keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
 client.loop_start()
 
 # Inserindo conteúdo na DHT
@@ -53,21 +65,21 @@ for i in range(1, keysQtde + 1, 1):
     values_sent = np.append(values_sent, value)
 
     # Formato padrão de mensagem 'put'
-    msg = key + " " + value
+    msg = codCliente + "/" + key + " " + value
 
     client.publish("put", msg)
     keys = np.append(keys, key)
 
     # Mensagem amigável de porcentagem concluída
-    print("(" + "{:.1f}".format((i / keysQtde) * 100), "%) ", end='')
-    print("Just published \'" + msg + "\' to topic \'put\'")
+    print(codCliente + ": " + "(" + "{:.1f}".format((i / keysQtde) * 100), "%) ", end='')
+    print(codCliente + ": " + "Just published \'" + msg + "\' to topic \'put\'")
 
     # Esperando ack-put com timeout
     start = time()
     while ack_received is False:
         end = time()
-        if (end - start) > 5:
-            print("TIMEOUT: Failed to add pair " + msg + " to DHT")
+        if (end - start) > 50:
+            print(codCliente + ": " + "TIMEOUT: Failed to add pair " + msg + " to DHT")
             exit(1)
 
 # Resgatando conteúdo da DHT
@@ -80,23 +92,23 @@ for i in range(1, keysQtde + 1, 1):
     client.publish("get", key)
 
     # Mensagem amigável de porcentagem concluída
-    print("(" + "{:.1f}".format((i / keysQtde) * 100), "%) ", end='')
-    print("Just published \'" + key + "\' to topic \'get\'")
+    print(codCliente + ": " + "(" + "{:.1f}".format((i / keysQtde) * 100), "%) ", end='')
+    print(codCliente + ": " + "Just published \'" + key + "\' to topic \'get\'")
 
     # Esperando ack-get com timeout
     start = time()
     while ack_received is False:
         end = time()
-        if (end - start) > 5:
-            print("TIMEOUT: Failed to retrieve pair " + key + "/{value} from DHT")
+        if (end - start) > 50:
+            print(codCliente + ": " + "TIMEOUT: Failed to retrieve pair " + key + '/{value} from DHT')
             exit(1)
 
     # Verificando se os valores recebidos correspondem aos valores esperados
     if values_received[idx] != values_sent[idx]:
-        print("ERROR: Retrieved value " + values_received[idx] + " does not match expected value " + values_sent[idx])
+        print(codCliente + ": " + "ERROR: Retrieved value " + values_received[idx] + " does not match expected value " + values_sent[idx])
         exit(1)
     else:
-        print("Retrieved value " + values_received[idx] + " matches expected value " + values_sent[idx])
+        print(codCliente + ": " + "Retrieved value " + values_received[idx] + " matches expected value " + values_sent[idx])
 
 client.loop_stop()
 client.disconnect()
