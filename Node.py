@@ -90,15 +90,18 @@ def on_message(client, userdata, msg):
         if int(dest) == nodeID: # Define intervalo de responsabilidade
             if tipo == "sucessor":
                 sucessor = source
-            elif antecessor != source:
+            elif tipo == "antecessor":
                 antecessor = source
-                print_intervalo(name, antecessor, nodeID)
-                
-                # Publica elementos da sua hashTable que não são mais de sua responsabilidade 
-                for key in hashTable:
+
+                # Publica elementos da sua hashTable que não são mais de sua responsabilidade
+                for key in hashTable: # se for novo nó não faz nada
                     if not check_interval(key):
                         client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
                         hashTable.pop(key) # apaga a chave
+
+                if antecessor != source:
+                    print_intervalo(name, antecessor, nodeID)
+                
 
     elif topic == "put":
         codCliente, m = m.split("/")
@@ -233,16 +236,17 @@ while (antecessor is None or sucessor is None) and (count < max_times or has_sta
     sleep(0.01)
     count += 1
 
-if antecessor is None:  # se for o único nó na DHT:    
-    print_intervalo(name, 0, rangeAddr)
-
 # Se inscreve no tópico join, put e get
 client.subscribe("join")
-client.subscribe("has_started")
 client.subscribe("put")
 client.subscribe("get")
 client.unsubscribe("has_started")
-client.unsubscribe("ack-join")
+
+if antecessor is None:  # se for o único nó na DHT:    
+    print_intervalo(name, 0, rangeAddr)
+else:
+    client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor)) # apenas o sucessor deve redistribuir as chaves
+
 
 ################ Saída da DHT ####################
 
