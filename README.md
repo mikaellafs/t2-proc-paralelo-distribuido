@@ -6,6 +6,8 @@ Experimentar a implementação de sistemas de comunicação indireta por meio de
 
 **Descrição**
 
+A DHT é formada por um conjunto de nós, onde cada nó é responsável por armazenar um intervalo de chaves, organizadas em uma topologia circular, crescente no sentido horário. Ao todo são 2^32 valores que podem ser distribuídos nos nós. Cada nó conhece apenas o seu antecessor e seu sucessor, sendo seu intervalo de responsabilidade de chaves igual a (id_antecessor, id_noAtual]. O número de nós é indefinido, assim, novos nós podem sair e entrar na DHT. Na entrada de um nó, apenas o antecessor e o sucessor devem ser atualizados. Com isso, esses nós respondem ao pedido de entrada na DHT indicando o que são para quem está entrando e alteram seu intervalo de responsabilidade, além disso, algumas chaves que antes eram de sua responsabilidade, agoram são do novo nó, com isso, a redistribuição  feita enviando os valores pelo método put e get.
+
 **Implementação**
 
 Ao ser inicializado, o nó da DHT deve avisar aos outros por meio do publish de seu nodeID no topic "join", o qual determinará seu intervalo de responsabilidade. Além disso, ele também se inscreve nesse tópico para receber o nodeID dos outros. Ao receber o nodeID de todos os nós (nesse caso 8, inclusive o seu próprio), o nó está pronto para receber mensagens, no entanto, isso não garante que os outros nós também estejam prontos, ou seja, não garante que eles receberam todos os nodeIDs também. O nó agora envia seu nodeID no topic "ack-join" e também se inscreve nele. Quando todos os nodesIDs são recebidos pelo tópico "ack-join" o nó se inscreve nos tópicos put e get, que são os tópicos no qual o cliente irá publicar mensagens.
