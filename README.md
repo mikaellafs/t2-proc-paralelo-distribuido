@@ -42,8 +42,9 @@ Em que ``<nome_do_nó>`` deve se substituído por um número ou string. Não é 
 
 O cliente é executado da seguinte maneira:
 ```
-python3 Cliente.py
+python3 Cliente.py <wait>
 ```
+Substituindo ``<wait>`` por 1, caso queira esperar por uma confirmação antes de recuperar as chaves pelo tópico get. Caso nenhum valor seja informado, não haverá confirmação, portanto é um argumento opcional.
 
 ## Automatização
 
@@ -53,3 +54,10 @@ Para iniciar todos os nós em background, execute o script ``runAllNodes.sh``
 bash runAllNodes.sh <num_nodes>
 ```
 Substituindo ``<num_nodes>`` pela quantidade de nós que deseja iniciar. Não é um argumento obrigatório, caso não seja informado, 8 nós serão criados. Você pode conferir os logs dos nós no arquivo log.txt gerado.
+
+Para rodar vários clientes, execute o script ``runClientes.sh``.
+
+```
+bash runClients.sh <num_clients>
+```
+Substituindo ``<num_clients>`` pela quantidade de clientes que deseja criar. Não é um argumento obrigatório, caso não seja informado, 5 clientes serão criados. Você pode conferir os logs dos clientes no arquivo logClients.txt gerado.
