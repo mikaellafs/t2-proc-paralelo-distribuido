@@ -20,7 +20,6 @@ def on_message(client, userdata, msg):
     if msg.topic == "ack-put":
         codC, node = m.split("/")
         if codC != codCliente: return
-
         print(codCliente + ": " + "Successfully added value to nodeID " + node)
         ack_received = True
         return
@@ -28,20 +27,18 @@ def on_message(client, userdata, msg):
     if msg.topic == "res-get":
         global values_received
         key, m = m.split("/")
-        #print(key)
+        # print(key)
         if key not in keys: return
-
         values_received = np.append(values_received, m)
         print(codCliente + ": " + "Received value: " + m)
         ack_received = True
         return
 
 
-from django.utils.crypto import get_random_string
-codCliente = get_random_string(10) # Identificador do cliente
+codCliente = get_random_string(10)  # Identificador do cliente
 
-rangeAddr = 1000
-#rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
+# rangeAddr = 1000
+rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
 mqttBroker = "127.0.0.1"  # Broker tem IP local e porta padrão
 
 client = mqtt.Client("Cliente")
@@ -52,8 +49,8 @@ client.subscribe("res-get")  # response-get()
 
 client.on_message = on_message
 
-keysQtde = 10
-#keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
+# keysQtde = 10
+keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
 client.loop_start()
 
 # Inserindo conteúdo na DHT

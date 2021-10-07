@@ -46,7 +46,7 @@ def checkIfSuc(newNodeID):  # Checa se o novo nó é um sucessor
 
 
 def print_intervalo(nome, esq, dir):
-    print("Node %s: Intervalo de responsabilidade: (%s, %s]"  # Formatação temporária
+    print("Node %s: Intervalo de responsabilidade: ( %s ... %s ]"
           % (nome, f"{int(esq):,}".replace(",", "\'"), f"{int(dir):,}".replace(",", "\'")))
 
 
@@ -61,7 +61,7 @@ def on_message(client, userdata, msg):
         global has_started
         has_started = True
     elif topic == "join":
-        client.publish("has_started", "yes") # mesmo que nao seja ant/suc, avisa que a DHT já começou
+        client.publish("has_started", "yes")  # Mesmo que não seja ant/suc, avisa que a DHT já começou
         newNodeID = int(m)
 
         # Verifica se é um novo antecessor, logo avisa pro novo nó que você é sucessor dele
@@ -87,27 +87,26 @@ def on_message(client, userdata, msg):
         source, dest, tipo = m.split("/")
         source = int(source)
 
-        if int(dest) == nodeID: # Define intervalo de responsabilidade
+        if int(dest) == nodeID:  # Define intervalo de responsabilidade
             if tipo == "sucessor":
                 sucessor = source
             elif tipo == "antecessor":
                 antecessor = source
 
                 # Publica elementos da sua hashTable que não são mais de sua responsabilidade
-                for key in hashTable: # se for novo nó não faz nada
+                for key in hashTable:  # Se for novo nó não faz nada
                     if not check_interval(key):
                         client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
-                        hashTable.pop(key) # apaga a chave
+                        hashTable.pop(key)  # Apaga a chave
 
                 if antecessor != source:
                     print_intervalo(name, antecessor, nodeID)
-                
 
     elif topic == "put":
         codCliente, m = m.split("/")
         key, value = m.split(" ", 1)  # m é uma mensagem no formato "chave string"
 
-        #print(codCliente, m, " ", key, value)
+        # print(codCliente, m, " ", key, value)
         if check_interval(key):
             key = int(key)
             hashTable[key] = value
@@ -170,7 +169,7 @@ def on_message(client, userdata, msg):
         leave_node = int(leave_node)
         ack_node = int(ack_node)
 
-        # Node deve tratar apenas a própria msg de ack-leave
+        # Node deve tratar apenas a mensagem de ack-leave destinada para ele
         if leave_node == nodeID:
 
             # Caso o reconhecimento seja de seu nó sucessor
@@ -198,8 +197,8 @@ def signal_handler(sig, frame):
     exit(0)
 
 
-rangeAddr = 1000
-#rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
+# rangeAddr = 1000
+rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
 hashTable = {}
 nodeID = randrange(0, rangeAddr)
 
@@ -224,11 +223,9 @@ client.subscribe("ack-join")
 client.on_message = on_message
 client.loop_start()
 
-# --------> E SE ELE FOR O PRIMEIRO? Verifica se a DHT já foi iniciada, espera um tempo 
-#                                   e inicia a DHT sozinho
 max_times = 100
-
 count = 0
+
 client.subscribe("has_started")
 # Manda seu nodeId para entrar e espera receber nodeId do seu antecessor e sucessor
 while (antecessor is None or sucessor is None) and (count < max_times or has_started):
@@ -245,7 +242,7 @@ client.unsubscribe("has_started")
 if antecessor is None:  # se for o único nó na DHT:    
     print_intervalo(name, 0, rangeAddr)
 else:
-    client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor)) # apenas o sucessor deve redistribuir as chaves
+    client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor))  # Apenas o sucessor deve redistribuir as chaves
 
 
 ################ Saída da DHT ####################
