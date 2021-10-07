@@ -36,9 +36,7 @@ Criação dos nós da DHT: pelo menos um nó deve ser executado para iniciar o r
 ```
 python3 Node.py <nome_do_nó>
 ```
-Em que ``<nome_do_nó>`` deve se substituído por um número ou string. Não é um argumento obrigatório, mas deve ser único se usado.
-
-
+Em que ``<nome_do_nó>`` deve ser substituído por um número ou string. Não é um argumento obrigatório, mas deve ser único se usado.
 
 O cliente é executado da seguinte maneira:
 ```

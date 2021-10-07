@@ -41,7 +41,7 @@ codCliente = get_random_string(10)  # Identificador do cliente
 rangeAddr = 2 ** 32  # Quantidade máxima de endereços na tabela hash
 mqttBroker = "127.0.0.1"  # Broker tem IP local e porta padrão
 
-client = mqtt.Client("Cliente")
+client = mqtt.Client(codCliente)
 client.connect(mqttBroker)
 
 client.subscribe("ack-put")  # acknowledgement-put()
