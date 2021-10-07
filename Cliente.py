@@ -79,6 +79,18 @@ for i in range(1, keysQtde + 1, 1):
             print(codCliente + ": " + "TIMEOUT: Failed to add pair " + msg + " to DHT")
             exit(1)
 
+
+# Voce pode setar para esperar confirmação antes de recuperar as chaves -> para realização de testes
+import sys
+if len(sys.argv) > 1 and sys.argv[1] == '1':
+    wait = True
+else:
+    wait = False
+
+if wait:
+    print("Aperte qualquer tecla para recuperar as chaves")
+    recuperar = input()
+
 # Resgatando conteúdo da DHT
 for i in range(1, keysQtde + 1, 1):
 
