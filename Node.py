@@ -184,7 +184,7 @@ def on_message(client, userdata, msg):
             if sucessor_ready and antecessor_ready:
                 # Publica todos os elementos de sua hashTable de volta na DHT
                 for key in hashTable:
-                    client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
+                    client.publish("put", str(nodeID) + "/%s %s" % (str(key), str(hashTable[key])))
                 disconnected = True  # Permite quebra do loop no signal_handler
 
 
@@ -242,6 +242,7 @@ client.unsubscribe("has_started")
 if antecessor is None:  # se for o único nó na DHT:    
     print_intervalo(name, 0, rangeAddr)
 else:
+    print_intervalo(name, antecessor, nodeID)
     client.publish("ack-join", "%d/%d/antecessor" % (nodeID, sucessor))  # Apenas o sucessor deve redistribuir as chaves
 
 
