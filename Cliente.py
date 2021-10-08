@@ -49,8 +49,8 @@ client.subscribe("res-get")  # response-get()
 
 client.on_message = on_message
 
-keysQtde = 10
-#keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
+#keysQtde = 10
+keysQtde = 100  # Quantidade de chaves a serem geradas e enviadas
 client.loop_start()
 
 # Inserindo conteúdo na DHT
