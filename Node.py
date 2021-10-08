@@ -94,9 +94,10 @@ def on_message(client, userdata, msg):
                 antecessor = source
 
                 # Publica elementos da sua hashTable que não são mais de sua responsabilidade
-                for key in hashTable:  # Se for novo nó não faz nada
+                aux_table = hashTable.copy()
+                for key in aux_table:  # Se for novo nó não faz nada
                     if not check_interval(key):
-                        client.publish("put", "%s %s" % (str(key), str(hashTable[key])))
+                        client.publish("put", "None/%s %s" % (str(key), str(hashTable[key])))
                         hashTable.pop(key)  # Apaga a chave
 
                 if antecessor != source:
