@@ -159,7 +159,8 @@ def on_message(client, userdata, msg):
                     client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
                     print_intervalo(name, antecessor, nodeID)
         else:
-            client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
+            if antecessor is None:
+                client.publish("ack-leave", "%s/%s" % (leave_node, str(nodeID)))
 
     elif topic == "ack-leave":
         global disconnected
